@@ -445,6 +445,106 @@ describe("ToolRouter — list_tags", () => {
   });
 });
 
+describe("ToolRouter — portfolio tools", () => {
+  it("lists portfolios", async () => {
+    const router = new ToolRouter(
+      mockClient({
+        listPortfolios: async () => ({
+          items: [{ gid: "pf1", name: "Q1 Initiatives" }],
+          next_page: null,
+        }),
+      } as unknown as Partial<AsanaClient>),
+      baseConfig({ readonly_mode: true })
+    );
+    const result = await router.handle("list_portfolios", {});
+    assert.equal(result.isError, undefined);
+    const data = JSON.parse(result.content[0].text);
+    assert.equal(data.count, 1);
+    assert.equal(data.portfolios[0].name, "Q1 Initiatives");
+  });
+
+  it("gets portfolio details", async () => {
+    const router = new ToolRouter(
+      mockClient({
+        getPortfolio: async () => ({
+          gid: "pf1",
+          name: "Q1 Initiatives",
+          owner: { gid: "u1", name: "Ryan" },
+        }),
+      } as unknown as Partial<AsanaClient>),
+      baseConfig({ readonly_mode: true })
+    );
+    const result = await router.handle("get_portfolio", { portfolio_gid: "pf1" });
+    assert.equal(result.isError, undefined);
+    const data = JSON.parse(result.content[0].text);
+    assert.equal(data.name, "Q1 Initiatives");
+  });
+
+  it("lists portfolio items", async () => {
+    const router = new ToolRouter(
+      mockClient({
+        listPortfolioItems: async () => ({
+          items: [
+            { gid: "p1", name: "Project A", resource_type: "project" },
+            { gid: "p2", name: "Project B", resource_type: "project" },
+          ],
+          next_page: null,
+        }),
+      } as unknown as Partial<AsanaClient>),
+      baseConfig({ readonly_mode: true })
+    );
+    const result = await router.handle("list_portfolio_items", { portfolio_gid: "pf1" });
+    const data = JSON.parse(result.content[0].text);
+    assert.equal(data.count, 2);
+  });
+});
+
+describe("ToolRouter — project status tools", () => {
+  it("lists project status updates", async () => {
+    const router = new ToolRouter(
+      mockClient({
+        listProjectStatusUpdates: async () => ({
+          items: [
+            { gid: "s1", title: "On track", status_type: "on_track", created_at: "2026-03-18" },
+          ],
+          next_page: null,
+        }),
+      } as unknown as Partial<AsanaClient>),
+      baseConfig({ readonly_mode: true })
+    );
+    const result = await router.handle("list_project_status_updates", { project_gid: "p1" });
+    const data = JSON.parse(result.content[0].text);
+    assert.equal(data.count, 1);
+    assert.equal(data.status_updates[0].status_type, "on_track");
+  });
+
+  it("respects project allowlist", async () => {
+    const router = new ToolRouter(
+      mockClient(),
+      baseConfig({ readonly_mode: true, project_allowlist: ["other"] })
+    );
+    const result = await router.handle("list_project_status_updates", { project_gid: "blocked" });
+    assert.equal(result.isError, true);
+  });
+
+  it("gets a single status update", async () => {
+    const router = new ToolRouter(
+      mockClient({
+        getProjectStatus: async () => ({
+          gid: "s1",
+          title: "On track",
+          text: "Everything looks good",
+          status_type: "on_track",
+        }),
+      } as unknown as Partial<AsanaClient>),
+      baseConfig({ readonly_mode: true })
+    );
+    const result = await router.handle("get_project_status", { status_gid: "s1" });
+    const data = JSON.parse(result.content[0].text);
+    assert.equal(data.text, "Everything looks good");
+  });
+});
+
 describe("ToolRouter — get_project_brief", () => {
   it("returns brief content when it exists", async () => {
     const router = new ToolRouter(

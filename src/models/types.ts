@@ -75,6 +75,7 @@ export interface ServerConfig {
   default_limit: number;
   max_limit: number;
   log_level: "debug" | "info" | "warning" | "error";
+  log_file?: string;
   allow_write_my_tasks: boolean;
   project_allowlist?: string[];
   write_allowlist?: string[];

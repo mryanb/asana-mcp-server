@@ -4,7 +4,7 @@
 
 set -euo pipefail
 
-CONFIG_DIR="$HOME/.config/asana-mcp"
+CONFIG_DIR="$HOME/.asana-mcp-server"
 CONFIG_FILE="$CONFIG_DIR/config.json"
 
 echo "=== asana-mcp-server configuration ==="
@@ -69,7 +69,7 @@ cat > "$CONFIG_FILE" << EOF
   "default_limit": $default_limit,
   "max_limit": $max_limit,
   "log_level": "$log_level",
-  "project_whitelist": $whitelist_json
+  "project_allowlist": $whitelist_json
 }
 EOF
 

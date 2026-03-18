@@ -119,10 +119,11 @@ All list tools support pagination via `offset` parameter and return `next_page` 
 | `ASANA_MCP_ALLOW_WRITE_MY_TASKS` | Allow writes on tasks assigned to the authenticated user regardless of project | `false` |
 | `ASANA_MCP_ALLOW_DELETE` | Enable `delete_task` tool (separate from write access) | `false` |
 | `ASANA_MCP_LOG_LEVEL` | Log verbosity: `debug`, `info`, `warning`, `error` | `info` |
+| `ASANA_MCP_LOG_FILE` | Path to JSONL log file for structured tool call logging (off by default) | — |
 
 ### Config File
 
-Optional: `~/.config/asana-mcp/config.json`
+Optional: `~/.asana-mcp-server/config.json`
 
 ```json
 {

@@ -16,7 +16,7 @@ import {
   CallToolRequestSchema,
 } from "@modelcontextprotocol/sdk/types.js";
 
-import { loadConfig, setLogLevel, log } from "./config/configuration.js";
+import { loadConfig, setLogLevel, setLogFile, log } from "./config/configuration.js";
 import { AsanaClient } from "./asana-client.js";
 import { ToolRouter } from "./tools/router.js";
 import { TOOL_SCHEMAS } from "./tools/schemas.js";
@@ -24,6 +24,7 @@ import { TOOL_SCHEMAS } from "./tools/schemas.js";
 async function main(): Promise<void> {
   const config = loadConfig();
   setLogLevel(config.log_level);
+  setLogFile(config.log_file);
 
   if (!config.asana_access_token) {
     log("error", "ASANA_ACCESS_TOKEN is required. Set it in a .env file or as an environment variable.");
@@ -48,6 +49,9 @@ async function main(): Promise<void> {
       log("warning", "Delete operations: ENABLED");
     }
   }
+  if (config.log_file) {
+    log("info", `Log file: ${config.log_file} (JSONL format)`);
+  }
   if (config.project_allowlist) {
     log("info", `Project allowlist: ${config.project_allowlist.join(", ")}`);
   }
@@ -55,7 +59,7 @@ async function main(): Promise<void> {
   const server = new Server(
     {
       name: "asana-mcp-server",
-      version: "0.1.2",
+      version: "0.1.3",
     },
     {
       capabilities: {
@@ -84,7 +88,7 @@ async function main(): Promise<void> {
   });
 
   const transport = new StdioServerTransport();
-  log("info", "Starting asana-mcp-server v0.1.2 on stdio");
+  log("info", "Starting asana-mcp-server v0.1.3 on stdio");
   await server.connect(transport);
 }
 

@@ -400,6 +400,80 @@ export class AsanaClient {
     );
   }
 
+  // --- Portfolios ---
+
+  async listPortfolios(opts: {
+    limit?: number;
+    owner?: string;
+    offset?: string;
+  }): Promise<{ items: unknown[]; next_page: string | null }> {
+    return this.requestPaginated(
+      {
+        path: "/portfolios",
+        params: {
+          workspace: this.defaultWorkspaceGid,
+          owner: opts.owner ?? "me",
+          opt_fields: "name,color,created_at,created_by.name,permalink_url",
+        },
+      },
+      opts.limit ?? 50,
+      opts.offset
+    );
+  }
+
+  async getPortfolio(portfolioGid: string): Promise<unknown> {
+    return this.request({
+      path: `/portfolios/${portfolioGid}`,
+      params: {
+        opt_fields: "name,color,owner.name,members.name,created_at,created_by.name,due_on,start_on,permalink_url,custom_field_settings",
+      },
+    });
+  }
+
+  async listPortfolioItems(
+    portfolioGid: string,
+    opts: { limit?: number; offset?: string }
+  ): Promise<{ items: unknown[]; next_page: string | null }> {
+    return this.requestPaginated(
+      {
+        path: `/portfolios/${portfolioGid}/items`,
+        params: {
+          opt_fields: "name,resource_type,status.color,status.title,owner.name,due_on,permalink_url,archived",
+        },
+      },
+      opts.limit ?? 50,
+      opts.offset
+    );
+  }
+
+  // --- Project Status Updates ---
+
+  async listProjectStatusUpdates(
+    projectGid: string,
+    opts: { limit?: number; offset?: string }
+  ): Promise<{ items: unknown[]; next_page: string | null }> {
+    return this.requestPaginated(
+      {
+        path: "/status_updates",
+        params: {
+          parent: projectGid,
+          opt_fields: "title,text,status_type,created_at,created_by.name,resource_subtype",
+        },
+      },
+      opts.limit ?? 10,
+      opts.offset
+    );
+  }
+
+  async getProjectStatus(statusGid: string): Promise<unknown> {
+    return this.request({
+      path: `/status_updates/${statusGid}`,
+      params: {
+        opt_fields: "title,text,html_text,status_type,created_at,created_by.name,resource_subtype",
+      },
+    });
+  }
+
   // --- Health ---
 
   async healthCheck(): Promise<{ ok: boolean; user: string; workspace: string }> {

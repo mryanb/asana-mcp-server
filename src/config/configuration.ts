@@ -1,9 +1,10 @@
-import { readFileSync, existsSync } from "node:fs";
-import { join } from "node:path";
+import { readFileSync, existsSync, appendFileSync, mkdirSync } from "node:fs";
+import { join, dirname } from "node:path";
 import { homedir } from "node:os";
 import type { ServerConfig } from "../models/types.js";
 
-const CONFIG_PATH = join(homedir(), ".config", "asana-mcp", "config.json");
+const CONFIG_DIR = join(homedir(), ".asana-mcp-server");
+const CONFIG_PATH = join(CONFIG_DIR, "config.json");
 
 interface ConfigFile {
   workspace_gid?: string;
@@ -57,6 +58,9 @@ export function loadConfig(): ServerConfig {
       ? allowDeleteEnv === "true" || allowDeleteEnv === "1"
       : fileConfig.allow_delete ?? false; // delete disabled by default
 
+  const logFile = process.env.ASANA_MCP_LOG_FILE ??
+    (fileConfig as Record<string, unknown>).log_file as string | undefined;
+
   const config: ServerConfig = {
     asana_access_token: process.env.ASANA_ACCESS_TOKEN,
     workspace_gid:
@@ -77,6 +81,7 @@ export function loadConfig(): ServerConfig {
     log_level: (process.env.ASANA_MCP_LOG_LEVEL ??
       fileConfig.log_level ??
       "info") as ServerConfig["log_level"],
+    log_file: logFile,
     project_allowlist: parseAllowlist(
       process.env.ASANA_MCP_PROJECT_ALLOWLIST,
       fileConfig.project_allowlist
@@ -92,9 +97,20 @@ export function loadConfig(): ServerConfig {
 
 const LOG_LEVELS = { debug: 0, info: 1, warning: 2, error: 3 } as const;
 let currentLevel: number = LOG_LEVELS.info;
+let logFilePath: string | undefined;
 
 export function setLogLevel(level: ServerConfig["log_level"]): void {
   currentLevel = LOG_LEVELS[level] ?? LOG_LEVELS.info;
+}
+
+export function setLogFile(path: string | undefined): void {
+  if (!path) return;
+  logFilePath = path;
+  try {
+    mkdirSync(dirname(path), { recursive: true });
+  } catch {
+    // best-effort
+  }
 }
 
 export function log(
@@ -108,4 +124,26 @@ export function log(
   process.stderr.write(
     `[asana-mcp-server] [${ts}] [${level.toUpperCase()}] ${prefix} ${message}\n`
   );
+}
+
+export interface ToolCallLog {
+  timestamp: string;
+  tool: string;
+  args?: Record<string, unknown>;
+  duration_ms: number;
+  status: "ok" | "error" | "blocked";
+  error?: string;
+}
+
+/**
+ * Append a structured JSON log entry to the log file.
+ * Each line is a self-contained JSON object (JSONL format).
+ */
+export function logToolCall(entry: ToolCallLog): void {
+  if (!logFilePath) return;
+  try {
+    appendFileSync(logFilePath, JSON.stringify(entry) + "\n");
+  } catch {
+    // best-effort — don't break tool execution over logging
+  }
 }

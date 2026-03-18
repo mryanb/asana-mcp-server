@@ -1,6 +1,6 @@
 import type { AsanaClient } from "../asana-client.js";
 import type { ServerConfig } from "../models/types.js";
-import { log } from "../config/configuration.js";
+import { log, logToolCall } from "../config/configuration.js";
 import { TOOL_SCHEMAS } from "./schemas.js";
 
 type ToolResult = {
@@ -102,6 +102,7 @@ export class ToolRouter {
     args: Record<string, unknown> | undefined
   ): Promise<ToolResult> {
     const a = args ?? {};
+    const start = Date.now();
     log("debug", `Tool call: ${name}`, name);
 
     // Enforce readonly mode: reject write tools when readonly is enabled
@@ -109,6 +110,7 @@ export class ToolRouter {
       const schema = TOOL_SCHEMAS.find((t) => t.name === name);
       if (schema && !schema.readonly) {
         log("warning", `Blocked write tool "${name}" — server is in readonly mode`, name);
+        logToolCall({ timestamp: new Date().toISOString(), tool: name, args: a, duration_ms: Date.now() - start, status: "blocked", error: "readonly mode" });
         return err(
           `Tool "${name}" is a write operation and is not available in readonly mode. ` +
           `Set ASANA_MCP_READONLY=false to enable write tools.`
@@ -116,50 +118,78 @@ export class ToolRouter {
       }
     }
 
+    let result: ToolResult;
     try {
       switch (name) {
         case "health_check":
-          return await this.healthCheck();
+          result = await this.healthCheck(); break;
         case "list_projects":
-          return await this.listProjects(a);
+          result = await this.listProjects(a); break;
         case "get_project":
-          return await this.getProject(a);
+          result = await this.getProject(a); break;
         case "list_my_tasks":
-          return await this.listMyTasks(a);
+          result = await this.listMyTasks(a); break;
         case "search_tasks":
-          return await this.searchTasks(a);
+          result = await this.searchTasks(a); break;
         case "get_task":
-          return await this.getTask(a);
+          result = await this.getTask(a); break;
         case "list_project_tasks":
-          return await this.listProjectTasks(a);
+          result = await this.listProjectTasks(a); break;
         case "list_task_stories":
-          return await this.listTaskStories(a);
+          result = await this.listTaskStories(a); break;
         case "list_sections":
-          return await this.listSections(a);
+          result = await this.listSections(a); break;
         case "get_project_brief":
-          return await this.getProjectBrief(a);
+          result = await this.getProjectBrief(a); break;
+        case "list_portfolios":
+          result = await this.listPortfolios(a); break;
+        case "get_portfolio":
+          result = await this.getPortfolio(a); break;
+        case "list_portfolio_items":
+          result = await this.listPortfolioItems(a); break;
+        case "list_project_status_updates":
+          result = await this.listProjectStatusUpdates(a); break;
+        case "get_project_status":
+          result = await this.getProjectStatus(a); break;
         case "get_notifications":
-          return await this.getNotifications(a);
+          result = await this.getNotifications(a); break;
         case "list_tags":
-          return await this.listTags(a);
+          result = await this.listTags(a); break;
         case "create_task":
-          return await this.createTask(a);
+          result = await this.createTask(a); break;
         case "update_task":
-          return await this.updateTask(a);
+          result = await this.updateTask(a); break;
         case "comment_on_task":
-          return await this.commentOnTask(a);
+          result = await this.commentOnTask(a); break;
         case "complete_task":
-          return await this.completeTask(a);
+          result = await this.completeTask(a); break;
         case "delete_task":
-          return await this.deleteTask(a);
+          result = await this.deleteTask(a); break;
         default:
+          logToolCall({ timestamp: new Date().toISOString(), tool: name, duration_ms: Date.now() - start, status: "error", error: "unknown tool" });
           return err(`Unknown tool: ${name}`);
       }
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
       log("error", `Tool error: ${msg}`, name);
+      logToolCall({ timestamp: new Date().toISOString(), tool: name, args: a, duration_ms: Date.now() - start, status: "error", error: msg });
       return err(msg);
     }
+
+    const duration = Date.now() - start;
+    const status = result.isError ? "error" : "ok";
+    logToolCall({
+      timestamp: new Date().toISOString(),
+      tool: name,
+      args: a,
+      duration_ms: duration,
+      status: status as "ok" | "error",
+      ...(result.isError ? { error: result.content[0]?.text } : {}),
+    });
+    if (duration > 5000) {
+      log("warning", `Slow tool call: ${duration}ms`, name);
+    }
+    return result;
   }
 
   // --- Tool handlers ---
@@ -173,7 +203,7 @@ export class ToolRouter {
       status: "ok",
       user: result.user,
       workspace: result.workspace,
-      version: "0.1.1",
+      version: "0.1.3",
       readonly_mode: this.config.readonly_mode,
       write_allowlist: this.config.write_allowlist ?? null,
       project_allowlist: this.config.project_allowlist ?? null,
@@ -390,6 +420,76 @@ export class ToolRouter {
       next_page: result.next_page,
       tags: result.items,
     });
+  }
+
+  private async listPortfolios(
+    args: Record<string, unknown>
+  ): Promise<ToolResult> {
+    const limit = clampLimit(args.limit as number | undefined, this.config);
+    const result = await this.client.listPortfolios({
+      owner: args.owner as string | undefined,
+      limit,
+      offset: args.offset as string | undefined,
+    });
+    return ok({
+      count: result.items.length,
+      next_page: result.next_page,
+      portfolios: result.items,
+    });
+  }
+
+  private async getPortfolio(
+    args: Record<string, unknown>
+  ): Promise<ToolResult> {
+    const gid = args.portfolio_gid as string;
+    if (!gid) return err("portfolio_gid is required");
+    const portfolio = await this.client.getPortfolio(gid);
+    return ok(portfolio);
+  }
+
+  private async listPortfolioItems(
+    args: Record<string, unknown>
+  ): Promise<ToolResult> {
+    const gid = args.portfolio_gid as string;
+    if (!gid) return err("portfolio_gid is required");
+    const limit = clampLimit(args.limit as number | undefined, this.config);
+    const result = await this.client.listPortfolioItems(gid, {
+      limit,
+      offset: args.offset as string | undefined,
+    });
+    return ok({
+      count: result.items.length,
+      next_page: result.next_page,
+      items: result.items,
+    });
+  }
+
+  private async listProjectStatusUpdates(
+    args: Record<string, unknown>
+  ): Promise<ToolResult> {
+    const gid = args.project_gid as string;
+    if (!gid) return err("project_gid is required");
+    const blocked = this.checkProjectAllowed(gid);
+    if (blocked) return blocked;
+    const limit = clampLimit(args.limit as number | undefined, this.config);
+    const result = await this.client.listProjectStatusUpdates(gid, {
+      limit,
+      offset: args.offset as string | undefined,
+    });
+    return ok({
+      count: result.items.length,
+      next_page: result.next_page,
+      status_updates: result.items,
+    });
+  }
+
+  private async getProjectStatus(
+    args: Record<string, unknown>
+  ): Promise<ToolResult> {
+    const gid = args.status_gid as string;
+    if (!gid) return err("status_gid is required");
+    const status = await this.client.getProjectStatus(gid);
+    return ok(status);
   }
 
   // --- Write tool handlers ---

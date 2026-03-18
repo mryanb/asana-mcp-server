@@ -255,6 +255,110 @@ export const TOOL_SCHEMAS: ToolSchema[] = [
     },
   },
   {
+    name: "list_portfolios",
+    readonly: true,
+    description:
+      "List portfolios in the workspace. Returns portfolios owned by the authenticated user by default.",
+    inputSchema: {
+      type: "object" as const,
+      properties: {
+        owner: {
+          type: "string",
+          description:
+            'Portfolio owner GID, or "me" for the authenticated user (default).',
+        },
+        limit: {
+          type: "number",
+          description: "Max number of results (default 50, max 200).",
+        },
+        offset: {
+          type: "string",
+          description: "Pagination offset from a previous response's next_page value.",
+        },
+      },
+    },
+  },
+  {
+    name: "get_portfolio",
+    readonly: true,
+    description:
+      "Get detailed info for a portfolio including its items (projects). Returns member list, dates, and status.",
+    inputSchema: {
+      type: "object" as const,
+      properties: {
+        portfolio_gid: {
+          type: "string",
+          description: "The Asana portfolio GID.",
+        },
+      },
+      required: ["portfolio_gid"],
+    },
+  },
+  {
+    name: "list_portfolio_items",
+    readonly: true,
+    description:
+      "List items (projects) in a portfolio with their status, owner, and dates.",
+    inputSchema: {
+      type: "object" as const,
+      properties: {
+        portfolio_gid: {
+          type: "string",
+          description: "The Asana portfolio GID.",
+        },
+        limit: {
+          type: "number",
+          description: "Max number of results (default 50, max 200).",
+        },
+        offset: {
+          type: "string",
+          description: "Pagination offset from a previous response's next_page value.",
+        },
+      },
+      required: ["portfolio_gid"],
+    },
+  },
+  {
+    name: "list_project_status_updates",
+    readonly: true,
+    description:
+      "List status updates for a project. Returns the status update feed from the project's overview page.",
+    inputSchema: {
+      type: "object" as const,
+      properties: {
+        project_gid: {
+          type: "string",
+          description: "The Asana project GID.",
+        },
+        limit: {
+          type: "number",
+          description: "Max number of results (default 10, max 100).",
+        },
+        offset: {
+          type: "string",
+          description: "Pagination offset from a previous response's next_page value.",
+        },
+      },
+      required: ["project_gid"],
+    },
+  },
+  {
+    name: "get_project_status",
+    readonly: true,
+    description:
+      "Get a single project status update by GID. Returns the full text, status type, and author.",
+    inputSchema: {
+      type: "object" as const,
+      properties: {
+        status_gid: {
+          type: "string",
+          description: "The Asana status update GID.",
+        },
+      },
+      required: ["status_gid"],
+    },
+  },
+  {
     name: "get_notifications",
     readonly: true,
     description:
