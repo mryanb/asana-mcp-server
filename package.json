@@ -35,14 +35,6 @@
   "engines": {
     "node": ">=18.0.0"
   },
-  "files": [
-    "dist",
-    "docs",
-    "scripts",
-    ".env.example",
-    "LICENSE",
-    "README.md"
-  ],
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.12.1",
     "dotenv": "^17.3.1"
