@@ -1,0 +1,55 @@
+{
+  "name": "asana-mcp-server",
+  "version": "0.1.2",
+  "description": "Asana MCP server for AI agents — read-only by default with optional scoped write access",
+  "type": "module",
+  "main": "dist/index.js",
+  "bin": {
+    "asana-mcp-server": "dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "tsx src/index.ts",
+    "clean": "rm -rf dist",
+    "test": "tsx --test src/__tests__/*.test.ts"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mryanb/asana-mcp-server.git"
+  },
+  "homepage": "https://github.com/mryanb/asana-mcp-server",
+  "bugs": {
+    "url": "https://github.com/mryanb/asana-mcp-server/issues"
+  },
+  "keywords": [
+    "asana",
+    "mcp",
+    "model-context-protocol",
+    "claude",
+    "agent",
+    "ai"
+  ],
+  "author": "Ryan Bantz",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "files": [
+    "dist",
+    "docs",
+    "scripts",
+    ".env.example",
+    "LICENSE",
+    "README.md"
+  ],
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.12.1",
+    "dotenv": "^17.3.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.7.0"
+  }
+}
