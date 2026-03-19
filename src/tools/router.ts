@@ -153,6 +153,8 @@ export class ToolRouter {
           result = await this.getProjectStatus(a); break;
         case "get_notifications":
           result = await this.getNotifications(a); break;
+        case "list_forecast":
+          result = await this.listForecast(a); break;
         case "list_tags":
           result = await this.listTags(a); break;
         case "create_task":
@@ -407,6 +409,50 @@ export class ToolRouter {
       since,
       next_page: result.next_page,
       tasks: result.items,
+    });
+  }
+
+  private async listForecast(
+    args: Record<string, unknown>
+  ): Promise<ToolResult> {
+    const limit = clampLimit(args.limit as number | undefined, this.config);
+    const today = new Date().toISOString().slice(0, 10);
+    const myGid = await this.getMyGid();
+
+    // Fetch overdue + due today in parallel
+    const [overdueResult, todayResult] = await Promise.all([
+      this.client.searchTasks({
+        assignee: myGid,
+        completed: false,
+        due_on_before: today,
+        sort_by: "due_date",
+        limit,
+      }),
+      this.client.searchTasks({
+        assignee: myGid,
+        completed: false,
+        due_on_after: today,
+        due_on_before: today,
+        sort_by: "due_date",
+        limit,
+      }),
+    ]);
+
+    // Deduplicate by gid (a task due today also matches the overdue search)
+    const seen = new Set<string>();
+    const tasks: unknown[] = [];
+    for (const task of [...overdueResult.items, ...todayResult.items]) {
+      const gid = (task as { gid?: string }).gid;
+      if (gid && !seen.has(gid)) {
+        seen.add(gid);
+        tasks.push(task);
+      }
+    }
+
+    return ok({
+      date: today,
+      count: tasks.length,
+      tasks,
     });
   }
 

@@ -362,7 +362,7 @@ export const TOOL_SCHEMAS: ToolSchema[] = [
     name: "get_notifications",
     readonly: true,
     description:
-      "Get recent activity relevant to the authenticated user. Returns tasks that were recently modified where the user is the assignee. Useful for surfacing mentions, assignment changes, and inbox-like activity without opening Asana.",
+      "Get recently modified tasks assigned to the authenticated user. Useful for triage — shows what changed on your assigned tasks. Note: this is NOT the Asana inbox. It does not surface @mentions, new assignments, or status updates you follow — only tasks already assigned to you that were recently touched.",
     inputSchema: {
       type: "object" as const,
       properties: {
@@ -374,6 +374,21 @@ export const TOOL_SCHEMAS: ToolSchema[] = [
         limit: {
           type: "number",
           description: "Max number of results (default 25, max 100).",
+        },
+      },
+    },
+  },
+  {
+    name: "list_forecast",
+    readonly: true,
+    description:
+      "Get a forecast view: overdue tasks + due today + flagged, sorted by due date. Great for daily planning and triage.",
+    inputSchema: {
+      type: "object" as const,
+      properties: {
+        limit: {
+          type: "number",
+          description: "Max number of results (default 50, max 200).",
         },
       },
     },

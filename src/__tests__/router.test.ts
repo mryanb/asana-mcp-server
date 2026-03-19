@@ -632,6 +632,44 @@ describe("ToolRouter — get_notifications", () => {
   });
 });
 
+describe("ToolRouter — list_forecast", () => {
+  it("combines overdue and due-today tasks, deduplicating by gid", async () => {
+    let callCount = 0;
+    const router = new ToolRouter(
+      mockClient({
+        getMyUserGid: async () => "user-1",
+        searchTasks: async () => {
+          callCount++;
+          if (callCount === 1) {
+            // First call: overdue
+            return {
+              items: [
+                { gid: "t1", name: "Overdue task", due_on: "2026-03-15" },
+                { gid: "t2", name: "Also overdue", due_on: "2026-03-16" },
+              ],
+              next_page: null,
+            };
+          }
+          // Second call: due today
+          return {
+            items: [
+              { gid: "t2", name: "Also overdue", due_on: "2026-03-16" },
+              { gid: "t3", name: "Due today", due_on: "2026-03-18" },
+            ],
+            next_page: null,
+          };
+        },
+      } as unknown as Partial<AsanaClient>),
+      baseConfig({ readonly_mode: true })
+    );
+    const result = await router.handle("list_forecast", {});
+    assert.equal(result.isError, undefined);
+    const data = JSON.parse(result.content[0].text);
+    assert.equal(data.count, 3); // t1, t2, t3 — t2 deduplicated
+    assert.ok(data.date);
+  });
+});
+
 describe("ToolRouter — delete gating", () => {
   it("blocks delete when allow_delete is false", async () => {
     const router = new ToolRouter(
