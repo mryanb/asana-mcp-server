@@ -707,6 +707,83 @@ describe("ToolRouter — delete gating", () => {
   });
 });
 
+describe("ToolRouter — goal tools", () => {
+  it("lists goals", async () => {
+    const router = new ToolRouter(
+      mockClient({
+        listGoals: async () => ({
+          items: [
+            { gid: "g1", name: "Make ChargeOver even more awesome", status: "no_status" },
+            { gid: "g2", name: "Grow revenue from existing customers", status: "no_status" },
+          ],
+          next_page: null,
+        }),
+      } as unknown as Partial<AsanaClient>),
+      baseConfig({ readonly_mode: true })
+    );
+    const result = await router.handle("list_goals", {});
+    assert.equal(result.isError, undefined);
+    const data = JSON.parse(result.content[0].text);
+    assert.equal(data.count, 2);
+    assert.equal(data.goals[0].name, "Make ChargeOver even more awesome");
+  });
+
+  it("gets goal details", async () => {
+    const router = new ToolRouter(
+      mockClient({
+        getGoal: async () => ({
+          gid: "g1",
+          name: "Build a demo pipeline we can count on",
+          owner: { gid: "u1", name: "Ryan Bantz" },
+          team: { gid: "t1", name: "ChargeOver" },
+          time_period: { display_name: "Q4 FY26" },
+        }),
+      } as unknown as Partial<AsanaClient>),
+      baseConfig({ readonly_mode: true })
+    );
+    const result = await router.handle("get_goal", { goal_gid: "g1" });
+    assert.equal(result.isError, undefined);
+    const data = JSON.parse(result.content[0].text);
+    assert.equal(data.name, "Build a demo pipeline we can count on");
+    assert.equal(data.owner.name, "Ryan Bantz");
+  });
+
+  it("requires goal_gid for get_goal", async () => {
+    const router = new ToolRouter(mockClient(), baseConfig());
+    const result = await router.handle("get_goal", {});
+    assert.equal(result.isError, true);
+    assert.ok(result.content[0].text.includes("goal_gid is required"));
+  });
+
+  it("lists subgoals", async () => {
+    const router = new ToolRouter(
+      mockClient({
+        listSubgoals: async () => ({
+          items: [
+            { gid: "sg1", name: "Request-to-booked rate: 49% to 70%" },
+            { gid: "sg2", name: "Grow marketing-sourced qualified demo requests" },
+          ],
+          next_page: null,
+        }),
+      } as unknown as Partial<AsanaClient>),
+      baseConfig({ readonly_mode: true })
+    );
+    const result = await router.handle("list_subgoals", { goal_gid: "g1" });
+    assert.equal(result.isError, undefined);
+    const data = JSON.parse(result.content[0].text);
+    assert.equal(data.count, 2);
+    assert.equal(data.parent_goal_gid, "g1");
+    assert.equal(data.goals[0].name, "Request-to-booked rate: 49% to 70%");
+  });
+
+  it("requires goal_gid for list_subgoals", async () => {
+    const router = new ToolRouter(mockClient(), baseConfig());
+    const result = await router.handle("list_subgoals", {});
+    assert.equal(result.isError, true);
+    assert.ok(result.content[0].text.includes("goal_gid is required"));
+  });
+});
+
 describe("ToolRouter — unknown tool", () => {
   it("returns error for unknown tool name", async () => {
     const router = new ToolRouter(mockClient(), baseConfig());

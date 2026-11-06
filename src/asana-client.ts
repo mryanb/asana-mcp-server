@@ -474,6 +474,62 @@ export class AsanaClient {
     });
   }
 
+  // --- Goals ---
+
+  async listGoals(opts: {
+    team?: string;
+    time_period?: string;
+    owner?: string;
+    portfolio?: string;
+    is_workspace_level?: boolean;
+    limit?: number;
+    offset?: string;
+  }): Promise<{ items: unknown[]; next_page: string | null }> {
+    const params: Record<string, string | undefined> = {
+      workspace: this.defaultWorkspaceGid,
+      opt_fields:
+        "name,owner.name,team.name,time_period.display_name,status,current_status_update.title,num_likes,metric.current_number_value,metric.target_number_value,metric.unit,metric.progress_source,permalink_url",
+      team: opts.team,
+      time_period: opts.time_period,
+      owner: opts.owner,
+      portfolio: opts.portfolio,
+      is_workspace_level: opts.is_workspace_level !== undefined ? String(opts.is_workspace_level) : undefined,
+    };
+
+    return this.requestPaginated(
+      { path: "/goals", params },
+      opts.limit ?? 50,
+      opts.offset
+    );
+  }
+
+  async getGoal(goalGid: string): Promise<unknown> {
+    return this.request({
+      path: `/goals/${goalGid}`,
+      params: {
+        opt_fields:
+          "name,notes,html_notes,owner.name,team.name,time_period.display_name,status,current_status_update.title,current_status_update.text,num_likes,metric.current_number_value,metric.target_number_value,metric.unit,metric.progress_source,followers.name,workspace.name,permalink_url",
+      },
+    });
+  }
+
+  async listSubgoals(
+    goalGid: string,
+    opts: { limit?: number; offset?: string }
+  ): Promise<{ items: unknown[]; next_page: string | null }> {
+    return this.requestPaginated(
+      {
+        path: `/goals/${goalGid}/subgoals`,
+        params: {
+          opt_fields:
+            "name,owner.name,team.name,time_period.display_name,status,current_status_update.title,num_likes,metric.current_number_value,metric.target_number_value,metric.unit,metric.progress_source,permalink_url",
+        },
+      },
+      opts.limit ?? 50,
+      opts.offset
+    );
+  }
+
   // --- Health ---
 
   async healthCheck(): Promise<{ ok: boolean; user: string; workspace: string }> {

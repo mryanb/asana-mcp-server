@@ -88,7 +88,7 @@ async function main(): Promise<void> {
   });
 
   const transport = new StdioServerTransport();
-  log("info", "Starting asana-mcp-server v0.1.3 on stdio");
+  log("info", "Starting asana-mcp-server v0.1.4 on stdio");
   await server.connect(transport);
 }
 

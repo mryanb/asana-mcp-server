@@ -157,6 +157,12 @@ export class ToolRouter {
           result = await this.listForecast(a); break;
         case "list_tags":
           result = await this.listTags(a); break;
+        case "list_goals":
+          result = await this.listGoals(a); break;
+        case "get_goal":
+          result = await this.getGoal(a); break;
+        case "list_subgoals":
+          result = await this.listSubgoals(a); break;
         case "create_task":
           result = await this.createTask(a); break;
         case "update_task":
@@ -205,7 +211,7 @@ export class ToolRouter {
       status: "ok",
       user: result.user,
       workspace: result.workspace,
-      version: "0.1.3",
+      version: "0.1.4",
       readonly_mode: this.config.readonly_mode,
       write_allowlist: this.config.write_allowlist ?? null,
       project_allowlist: this.config.project_allowlist ?? null,
@@ -536,6 +542,55 @@ export class ToolRouter {
     if (!gid) return err("status_gid is required");
     const status = await this.client.getProjectStatus(gid);
     return ok(status);
+  }
+
+  // --- Goal handlers ---
+
+  private async listGoals(
+    args: Record<string, unknown>
+  ): Promise<ToolResult> {
+    const limit = clampLimit(args.limit as number | undefined, this.config);
+    const result = await this.client.listGoals({
+      team: args.team as string | undefined,
+      time_period: args.time_period as string | undefined,
+      owner: args.owner as string | undefined,
+      portfolio: args.portfolio as string | undefined,
+      is_workspace_level: args.is_workspace_level as boolean | undefined,
+      limit,
+      offset: args.offset as string | undefined,
+    });
+    return ok({
+      count: result.items.length,
+      next_page: result.next_page,
+      goals: result.items,
+    });
+  }
+
+  private async getGoal(
+    args: Record<string, unknown>
+  ): Promise<ToolResult> {
+    const gid = args.goal_gid as string;
+    if (!gid) return err("goal_gid is required");
+    const goal = await this.client.getGoal(gid);
+    return ok(goal);
+  }
+
+  private async listSubgoals(
+    args: Record<string, unknown>
+  ): Promise<ToolResult> {
+    const gid = args.goal_gid as string;
+    if (!gid) return err("goal_gid is required");
+    const limit = clampLimit(args.limit as number | undefined, this.config);
+    const result = await this.client.listSubgoals(gid, {
+      limit,
+      offset: args.offset as string | undefined,
+    });
+    return ok({
+      count: result.items.length,
+      next_page: result.next_page,
+      parent_goal_gid: gid,
+      goals: result.items,
+    });
   }
 
   // --- Write tool handlers ---
