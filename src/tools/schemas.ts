@@ -410,6 +410,46 @@ export const TOOL_SCHEMAS: ToolSchema[] = [
   },
 
   {
+    name: "list_project_templates",
+    readonly: true,
+    description:
+      "List project templates in the workspace, optionally filtered to a specific team. Returns name, description, team, owner, requested dates/roles. Note: the Asana API does not expose a template's sections or tasks — only metadata.",
+    inputSchema: {
+      type: "object" as const,
+      properties: {
+        team: {
+          type: "string",
+          description: "Filter by team GID. If omitted, lists all templates in the workspace.",
+        },
+        limit: {
+          type: "number",
+          description: "Max number of results (default 50, max 200).",
+        },
+        offset: {
+          type: "string",
+          description: "Pagination offset from a previous response's next_page value.",
+        },
+      },
+    },
+  },
+  {
+    name: "get_project_template",
+    readonly: true,
+    description:
+      "Get full details for a single project template by GID. Returns name, description (plain and HTML), team, owner, requested dates, and requested roles. Note: the Asana API does not expose a template's sections or tasks — only metadata.",
+    inputSchema: {
+      type: "object" as const,
+      properties: {
+        template_gid: {
+          type: "string",
+          description: "The Asana project template GID.",
+        },
+      },
+      required: ["template_gid"],
+    },
+  },
+
+  {
     name: "list_goals",
     readonly: true,
     description:

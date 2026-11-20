@@ -707,6 +707,71 @@ describe("ToolRouter — delete gating", () => {
   });
 });
 
+describe("ToolRouter — project template tools", () => {
+  it("lists project templates", async () => {
+    const router = new ToolRouter(
+      mockClient({
+        listProjectTemplates: async () => ({
+          items: [
+            { gid: "pt1", name: "Project Starter", team: { name: "Engineering" } },
+            { gid: "pt2", name: "Sprint Template", team: { name: "Engineering" } },
+          ],
+          next_page: null,
+        }),
+      } as unknown as Partial<AsanaClient>),
+      baseConfig({ readonly_mode: true })
+    );
+    const result = await router.handle("list_project_templates", {});
+    assert.equal(result.isError, undefined);
+    const data = JSON.parse(result.content[0].text);
+    assert.equal(data.count, 2);
+    assert.equal(data.templates[0].name, "Project Starter");
+  });
+
+  it("lists templates filtered by team", async () => {
+    let capturedTeam: string | undefined;
+    const router = new ToolRouter(
+      mockClient({
+        listProjectTemplates: async (opts: Record<string, unknown>) => {
+          capturedTeam = opts.team as string;
+          return { items: [{ gid: "pt1", name: "Sprint Template" }], next_page: null };
+        },
+      } as unknown as Partial<AsanaClient>),
+      baseConfig({ readonly_mode: true })
+    );
+    await router.handle("list_project_templates", { team: "team-123" });
+    assert.equal(capturedTeam, "team-123");
+  });
+
+  it("gets project template details", async () => {
+    const router = new ToolRouter(
+      mockClient({
+        getProjectTemplate: async () => ({
+          gid: "pt1",
+          name: "Project Starter",
+          description: "A starter template for new projects",
+          team: { name: "Engineering" },
+          requested_dates: [{ name: "Start date" }, { name: "Due date" }],
+          requested_roles: [{ name: "Project lead" }],
+        }),
+      } as unknown as Partial<AsanaClient>),
+      baseConfig({ readonly_mode: true })
+    );
+    const result = await router.handle("get_project_template", { template_gid: "pt1" });
+    assert.equal(result.isError, undefined);
+    const data = JSON.parse(result.content[0].text);
+    assert.equal(data.name, "Project Starter");
+    assert.equal(data.requested_roles[0].name, "Project lead");
+  });
+
+  it("requires template_gid for get_project_template", async () => {
+    const router = new ToolRouter(mockClient(), baseConfig());
+    const result = await router.handle("get_project_template", {});
+    assert.equal(result.isError, true);
+    assert.ok(result.content[0].text.includes("template_gid is required"));
+  });
+});
+
 describe("ToolRouter — goal tools", () => {
   it("lists goals", async () => {
     const router = new ToolRouter(

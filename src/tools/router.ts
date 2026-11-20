@@ -157,6 +157,10 @@ export class ToolRouter {
           result = await this.listForecast(a); break;
         case "list_tags":
           result = await this.listTags(a); break;
+        case "list_project_templates":
+          result = await this.listProjectTemplates(a); break;
+        case "get_project_template":
+          result = await this.getProjectTemplate(a); break;
         case "list_goals":
           result = await this.listGoals(a); break;
         case "get_goal":
@@ -542,6 +546,33 @@ export class ToolRouter {
     if (!gid) return err("status_gid is required");
     const status = await this.client.getProjectStatus(gid);
     return ok(status);
+  }
+
+  // --- Project Template handlers ---
+
+  private async listProjectTemplates(
+    args: Record<string, unknown>
+  ): Promise<ToolResult> {
+    const limit = clampLimit(args.limit as number | undefined, this.config);
+    const result = await this.client.listProjectTemplates({
+      team: args.team as string | undefined,
+      limit,
+      offset: args.offset as string | undefined,
+    });
+    return ok({
+      count: result.items.length,
+      next_page: result.next_page,
+      templates: result.items,
+    });
+  }
+
+  private async getProjectTemplate(
+    args: Record<string, unknown>
+  ): Promise<ToolResult> {
+    const gid = args.template_gid as string;
+    if (!gid) return err("template_gid is required");
+    const template = await this.client.getProjectTemplate(gid);
+    return ok(template);
   }
 
   // --- Goal handlers ---

@@ -474,6 +474,51 @@ export class AsanaClient {
     });
   }
 
+  // --- Project Templates ---
+
+  async listProjectTemplates(opts: {
+    team?: string;
+    limit?: number;
+    offset?: string;
+  }): Promise<{ items: unknown[]; next_page: string | null }> {
+    if (opts.team) {
+      return this.requestPaginated(
+        {
+          path: `/teams/${opts.team}/project_templates`,
+          params: {
+            opt_fields:
+              "name,description,color,owner,public,team.name,requested_dates.name,requested_dates.description,requested_roles.name",
+          },
+        },
+        opts.limit ?? 50,
+        opts.offset
+      );
+    }
+
+    return this.requestPaginated(
+      {
+        path: "/project_templates",
+        params: {
+          workspace: this.defaultWorkspaceGid,
+          opt_fields:
+            "name,description,color,owner,public,team.name,requested_dates.name,requested_dates.description,requested_roles.name",
+        },
+      },
+      opts.limit ?? 50,
+      opts.offset
+    );
+  }
+
+  async getProjectTemplate(templateGid: string): Promise<unknown> {
+    return this.request({
+      path: `/project_templates/${templateGid}`,
+      params: {
+        opt_fields:
+          "name,description,html_description,color,owner,public,team.name,requested_dates.name,requested_dates.description,requested_roles.name",
+      },
+    });
+  }
+
   // --- Goals ---
 
   async listGoals(opts: {
